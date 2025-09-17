@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="utf-8" />
+  <title>IoT Health AI Dashboard</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    body { font-family: Arial, sans-serif; text-align:center; margin:20px; }
+    .status { padding:10px 16px; border-radius:8px; display:inline-block; font-weight:bold; }
+    .normal { background:#2ecc71; color:white; }
+    .anomali { background:#e74c3c; color:white; }
+    canvas { max-width:800px; margin:20px auto; }
+  </style>
+</head>
+<body>
+  <h1>IoT Health Monitoring + AI</h1>
+  <div id="statusBox" class="status">Menunggu data...</div>
+  <h2>BPM: <span id="bpm">-</span> | SpO₂: <span id="spo2">-</span>%</h2>
+  <canvas id="healthChart"></canvas>
+
+  <script>
+    const ctx = document.getElementById("healthChart").getContext("2d");
+    const chart = new Chart(ctx, {
+      type: "line",
+      data: {
+        labels: [],
+        datasets: [
+          { label: "BPM", data: [], tension:0.2 },
+          { label: "SpO₂", data: [], tension:0.2 }
+        ]
+      },
+      options: { responsive: true, scales: { y: { beginAtZero: true } } }
+    });
+
+    async function fetchData() {
+      try {
+        const res = await fetch("/latest");
+        const data = await res.json();
+        document.getElementById("bpm").innerText = data.bpm ?? "-";
+        document.getElementById("spo2").innerText = data.spo2 ?? "-";
+        const statusBox = document.getElementById("statusBox");
+        statusBox.innerText = data.status ?? "Menunggu data...";
+        statusBox.className = "status " + ((data.status && data.status.includes("Normal")) ? "normal" : "anomali");
+
+        chart.data.labels.push(new Date().toLocaleTimeString());
+        chart.data.datasets[0].data.push(data.bpm ?? null);
+        chart.data.datasets[1].data.push(data.spo2 ?? null);
+        if (chart.data.labels.length > 20) {
+          chart.data.labels.shift();
+          chart.data.datasets.forEach(ds => ds.data.shift());
+        }
+        chart.update();
+      } catch (e) {
+        console.error("Fetch error:", e);
+      }
+    }
+
+    setInterval(fetchData, 3000);
+    fetchData();
+  </script>
+</body>
+</html>
