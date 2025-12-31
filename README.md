@@ -1,1 +1,1 @@
-"# Python" 
+"import terus, kapan export nya"
